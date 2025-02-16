@@ -130,7 +130,6 @@ export const AgreementDialog = ({ isOpen, onClose, agreement, loading, nft }: Ag
           });
         }
         setDeploymentStatus('success');
-        setTimeout(() => onClose(), 3000);
       } else {
         console.error('Deployment failed:', data.output);
         setSteps(prevSteps => {
@@ -197,13 +196,24 @@ export const AgreementDialog = ({ isOpen, onClose, agreement, loading, nft }: Ag
           </>
         ) : (
           <div className="py-8">
-            <h2 className="text-white text-24 font-medium text-center mb-8">
-              Processing Transaction
-            </h2>
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-white text-24 font-medium">
+                Processing Transaction
+              </h2>
+              {deploymentStatus && (
+                <button 
+                  onClick={onClose}
+                  className="text-muted hover:text-white"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             <DeploymentProgress 
               steps={steps}
               currentStep={currentStep}
               deploymentStatus={deploymentStatus}
+              nftTokenId={nft?.token_id}
             />
           </div>
         )}

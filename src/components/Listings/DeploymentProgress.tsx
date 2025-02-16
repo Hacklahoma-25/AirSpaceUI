@@ -8,9 +8,15 @@ interface DeploymentProgressProps {
   steps: Step[];
   currentStep: number;
   deploymentStatus?: 'success' | 'failed' | null;
+  nftTokenId?: number;
 }
 
-export const DeploymentProgress = ({ steps, currentStep, deploymentStatus }: DeploymentProgressProps) => {
+export const DeploymentProgress = ({ steps, currentStep, deploymentStatus, nftTokenId }: DeploymentProgressProps) => {
+  const handleVerifyClick = () => {
+    const etherscanUrl = `https://sepolia.etherscan.io/token/0x676AB843E8aDd6363779409Ee5057f4a26F46F59?a=${nftTokenId}`;
+    window.open(etherscanUrl, '_blank');
+  };
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="space-y-6">
@@ -82,10 +88,21 @@ export const DeploymentProgress = ({ steps, currentStep, deploymentStatus }: Dep
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="inline-flex items-center gap-2 text-green-500"
+              className="flex flex-col items-center gap-4"
             >
-              <CheckCircle className="w-12 h-12" />
-              <span className="text-xl font-medium">Transaction Completed Successfully!</span>
+              <div className="inline-flex items-center gap-2 text-green-500">
+                <CheckCircle className="w-12 h-12" />
+                <span className="text-xl font-medium">Transaction Completed Successfully!</span>
+              </div>
+              <button
+                onClick={handleVerifyClick}
+                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-all flex items-center gap-2"
+              >
+                <span>Verify on Etherscan</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </button>
             </motion.div>
           ) : (
             <motion.div
