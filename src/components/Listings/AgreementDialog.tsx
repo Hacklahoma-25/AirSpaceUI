@@ -82,7 +82,10 @@ export const AgreementDialog = ({ isOpen, onClose, agreement, loading, nft }: Ag
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
+        mode: 'cors',
+        credentials: 'include',
         body: JSON.stringify({
           buyer_address: "0x676AB843E8aDd6363779409Ee5057f4a26F46F59",
           seller_address: "0x9A7C3F4E27D625dA2dE8F4B1239A9B4635A4C6B9",
@@ -90,6 +93,10 @@ export const AgreementDialog = ({ isOpen, onClose, agreement, loading, nft }: Ag
           tokens: nft.token_id
         }),
       });
+
+      if (!analysisResponse.ok) {
+        throw new Error(`HTTP error! status: ${analysisResponse.status}`);
+      }
 
       const analysisData: DeploymentResponse = await analysisResponse.json();
       
