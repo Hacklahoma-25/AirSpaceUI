@@ -77,99 +77,65 @@ export const AgreementDialog = ({ isOpen, onClose, agreement, loading, nft }: Ag
         return newSteps;
       });
 
-      // First API call to analyze deployment
-      const analysisResponse = await fetch('http://127.0.0.1:8000/api/analyze_deployment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        mode: 'cors',
-        body: JSON.stringify({
-          buyer_address: "0x676AB843E8aDd6363779409Ee5057f4a26F46F59",
-          seller_address: "0x9A7C3F4E27D625dA2dE8F4B1239A9B4635A4C6B9",
-          contract_id: nft.contract_address,
-          tokens: nft.token_id
-        }),
-      });
-
-      if (!analysisResponse.ok) {
-        throw new Error(`HTTP error! status: ${analysisResponse.status}`);
-      }
-
-      const analysisData: DeploymentResponse = await analysisResponse.json();
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Update FAA validation status
       setSteps(prevSteps => {
         const newSteps = [...prevSteps];
         newSteps[0].status = 'completed';
-        newSteps[1].status = 'loading'; // Start user validation
+        newSteps[1].status = 'loading';
         return newSteps;
       });
 
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay for UI
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Update user validation status
+      setSteps(prevSteps => {
+        const newSteps = [...prevSteps];
+        newSteps[1].status = 'completed';
+        newSteps[2].status = 'loading';
+        return newSteps;
+      });
+      setCurrentStep(2);
 
-      if (analysisData.decision === 'EXECUTE') {
-        // Update user validation status
-        setSteps(prevSteps => {
-          const newSteps = [...prevSteps];
-          newSteps[1].status = 'completed';
-          newSteps[2].status = 'loading'; // Start smart contract execution
-          return newSteps;
-        });
-        setCurrentStep(2);
+      // Execute hardhat command
+      const response = await fetch('/api/execute-hardhat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokenId: nft.token_id
+        }),
+      });
 
-        // Execute the deployment
-        const deployResponse = await fetch('http://127.0.0.1:8000/api/execute_deployment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-          mode: 'cors',
-          body: JSON.stringify({
-            nft_id: nft.token_id,
-            command: `npx hardhat deploy --nft-id ${nft.token_id} --network sepolia`
-          }),
-        });
-
-        const deployData = await deployResponse.json();
-        
-        if (deployData.deployment_status === 'success') {
-          // Update remaining steps sequentially
-          for (let i = 2; i < steps.length; i++) {
-            setCurrentStep(i);
-            setSteps(prevSteps => {
-              const newSteps = [...prevSteps];
-              newSteps[i].status = 'loading';
-              return newSteps;
-            });
-            
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Delay for visual feedback
-            
-            setSteps(prevSteps => {
-              const newSteps = [...prevSteps];
-              newSteps[i].status = 'completed';
-              return newSteps;
-            });
-          }
-          setDeploymentStatus('success');
-          setTimeout(() => onClose(), 3000);
-        } else {
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        // Update remaining steps sequentially
+        for (let i = 2; i < steps.length; i++) {
+          setCurrentStep(i);
           setSteps(prevSteps => {
             const newSteps = [...prevSteps];
-            newSteps[currentStep].status = 'failed';
+            newSteps[i].status = 'loading';
             return newSteps;
           });
-          setDeploymentStatus('failed');
+          
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          setSteps(prevSteps => {
+            const newSteps = [...prevSteps];
+            newSteps[i].status = 'completed';
+            return newSteps;
+          });
         }
+        setDeploymentStatus('success');
+        setTimeout(() => onClose(), 3000);
       } else {
-        // Handle analysis rejection
+        console.error('Deployment failed:', data.output);
         setSteps(prevSteps => {
           const newSteps = [...prevSteps];
-          newSteps[1].status = 'failed';
+          newSteps[currentStep].status = 'failed';
           return newSteps;
         });
         setDeploymentStatus('failed');
