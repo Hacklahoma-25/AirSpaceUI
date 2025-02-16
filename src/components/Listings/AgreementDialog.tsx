@@ -23,6 +23,13 @@ interface Step {
   status: StepStatus;
 }
 
+interface DeploymentResponse {
+  decision: 'EXECUTE' | 'REJECT';
+  deployment_status: 'success' | 'failed';
+  deployment_output: string;
+  model_response: string;
+}
+
 export const AgreementDialog = ({ isOpen, onClose, agreement, loading, nft }: AgreementDialogProps) => {
   const [approvalLoading, setApprovalLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -62,27 +69,16 @@ export const AgreementDialog = ({ isOpen, onClose, agreement, loading, nft }: Ag
     setShowProgress(true);
     setApprovalLoading(true);
 
-    // Simulate step progression
-    for (let i = 0; i < steps.length; i++) {
-      setCurrentStep(i);
-      setSteps(prevSteps => {
-        const newSteps = [...prevSteps];
-        newSteps[i].status = 'loading';
-        return newSteps;
-      });
-      
-      // Wait for 2 seconds before moving to next step
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setSteps(prevSteps => {
-        const newSteps = [...prevSteps];
-        newSteps[i].status = 'completed';
-        return newSteps;
-      });
-    }
-
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/analyze_deployment', {
+      // Start FAA validation
+      setSteps(prevSteps => {
+        const newSteps = [...prevSteps];
+        newSteps[0].status = 'loading';
+        return newSteps;
+      });
+
+      // First API call to analyze deployment
+      const analysisResponse = await fetch('http://127.0.0.1:8000/api/analyze_deployment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,27 +91,87 @@ export const AgreementDialog = ({ isOpen, onClose, agreement, loading, nft }: Ag
         }),
       });
 
-      const data = await response.json();
+      const analysisData: DeploymentResponse = await analysisResponse.json();
       
-      if (data.deployment_status === 'success') {
-        setDeploymentStatus('success');
-        setTimeout(() => onClose(), 3000); // Close dialog after showing success
-      } else {
-        setDeploymentStatus('failed');
+      // Update FAA validation status
+      setSteps(prevSteps => {
+        const newSteps = [...prevSteps];
+        newSteps[0].status = 'completed';
+        newSteps[1].status = 'loading'; // Start user validation
+        return newSteps;
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay for UI
+
+      if (analysisData.decision === 'EXECUTE') {
+        // Update user validation status
         setSteps(prevSteps => {
           const newSteps = [...prevSteps];
-          newSteps[currentStep].status = 'failed';
+          newSteps[1].status = 'completed';
+          newSteps[2].status = 'loading'; // Start smart contract execution
           return newSteps;
         });
+        setCurrentStep(2);
+
+        // Execute the deployment
+        const deployResponse = await fetch('http://127.0.0.1:8000/api/execute_deployment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nft_id: nft.token_id,
+            command: `npx hardhat deploy --nft-id ${nft.token_id} --network sepolia`
+          }),
+        });
+
+        const deployData = await deployResponse.json();
+        
+        if (deployData.deployment_status === 'success') {
+          // Update remaining steps sequentially
+          for (let i = 2; i < steps.length; i++) {
+            setCurrentStep(i);
+            setSteps(prevSteps => {
+              const newSteps = [...prevSteps];
+              newSteps[i].status = 'loading';
+              return newSteps;
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Delay for visual feedback
+            
+            setSteps(prevSteps => {
+              const newSteps = [...prevSteps];
+              newSteps[i].status = 'completed';
+              return newSteps;
+            });
+          }
+          setDeploymentStatus('success');
+          setTimeout(() => onClose(), 3000);
+        } else {
+          setSteps(prevSteps => {
+            const newSteps = [...prevSteps];
+            newSteps[currentStep].status = 'failed';
+            return newSteps;
+          });
+          setDeploymentStatus('failed');
+        }
+      } else {
+        // Handle analysis rejection
+        setSteps(prevSteps => {
+          const newSteps = [...prevSteps];
+          newSteps[1].status = 'failed';
+          return newSteps;
+        });
+        setDeploymentStatus('failed');
       }
     } catch (error) {
       console.error('Error during deployment:', error);
-      setDeploymentStatus('failed');
       setSteps(prevSteps => {
         const newSteps = [...prevSteps];
         newSteps[currentStep].status = 'failed';
         return newSteps;
       });
+      setDeploymentStatus('failed');
     } finally {
       setApprovalLoading(false);
     }
