@@ -126,6 +126,24 @@ ${BUYER_DETAILS.name}
     }
   };
 
+  const getListingImage = (title: string) => {
+    const firstWord = title.split(' ')[0].toLowerCase();
+    switch (firstWord) {
+      case 'niagara':
+        return "/images/hero/banner-image.png"; // Keep existing Niagara image
+      case 'vancouver':
+        return "/images/listings/vancouver.png";
+      case 'miami':
+        return "/images/listings/miami.png";
+      case 'sydney':
+        return "/images/listings/sydney.png";
+      case 'dubai':
+        return "/images/listings/dubai.png";
+      default:
+        return "/images/hero/banner-image.png";
+    }
+  };
+
   if (loading) return <div className="text-white text-center py-20">Loading...</div>;
   if (error) return <div className="text-red-500 text-center py-20">{error}</div>;
 
@@ -136,7 +154,7 @@ ${BUYER_DETAILS.name}
           <div key={listing.token_id} className="grid lg:grid-cols-2 gap-8 bg-dark_grey bg-opacity-35 rounded-3xl p-8">
             <div className="relative h-[400px]">
               <Image
-                src="/images/hero/banner-image.png"
+                src={getListingImage(listing.title)}
                 alt={listing.title}
                 fill
                 className="object-cover rounded-2xl"
