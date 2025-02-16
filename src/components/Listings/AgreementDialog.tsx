@@ -15,9 +15,9 @@ interface AgreementDialogProps {
   } | null;
 }
 
-type StepStatus = 'waiting' | 'loading' | 'completed' | 'failed';
+export type StepStatus = 'waiting' | 'loading' | 'completed' | 'failed';
 
-interface Step {
+export interface Step {
   title: string;
   description: string;
   status: StepStatus;
