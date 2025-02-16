@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { NFT } from "@/types/nft";
 import { AgreementDialog } from "./AgreementDialog";
-import { listingsData } from "@/app/api/data";
 
 // Add these constants at the top of the file
 const SELLER_DETAILS = {
@@ -16,7 +15,7 @@ const SELLER_DETAILS = {
 const BUYER_DETAILS = {
   address: "0x123ABC456DEF789GHI987JKL654MNO321PQR",
   physical_address: "456 Token Avenue, Digital Town, DT 67890",
-  name: "John Crypto Doe"
+  name: "Eddie Murphy"
 };
 
 export const ListingsGrid = () => {
@@ -29,24 +28,23 @@ export const ListingsGrid = () => {
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
 
   useEffect(() => {
-    // Using placeholder data instead of API call
-    const mappedListings: NFT[] = listingsData.map((item, index) => ({
-      id: index,
-      title: item.title,
-      name: `AirSpace - ${item.title}`,
-      description: item.description,
-      property_address: item.address,
-      current_height: item.currentHeight,
-      maximum_height: item.maxHeight,
-      available_floors: item.floorsToBuy,
-      price: item.price,
-      latitude: 0,
-      longitude: 0,
-      contract_address: "0x676AB843E8aDd6363779409Ee5057f4a26F46F59",
-      token_id: index + 1
-    }));
-    setListings(mappedListings);
-    setLoading(false);
+    const fetchListings = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/nfts/');
+        if (!response.ok) {
+          throw new Error('Failed to fetch listings');
+        }
+        const data = await response.json();
+        setListings(data); // Using the API response directly as it matches our NFT interface
+      } catch (err) {
+        console.error('Error fetching listings:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch listings');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
   }, []);
 
   const handleBuyClick = async (nft: NFT) => {
@@ -61,7 +59,7 @@ export const ListingsGrid = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          nft_token_id: nft.token_id,
+          nft_token_id: nft.token_id, // Using token_id from API
           nft_value: nft.price.replace(/,/g, ''),
           buyer_address: BUYER_DETAILS.address,
           seller_address: SELLER_DETAILS.address,
@@ -134,7 +132,7 @@ ${BUYER_DETAILS.name}
   return (
     <>
       <div className="grid gap-8">
-        {listings.map((listing, index) => (
+        {listings.map((listing) => (
           <div key={listing.token_id} className="grid lg:grid-cols-2 gap-8 bg-dark_grey bg-opacity-35 rounded-3xl p-8">
             <div className="relative h-[400px]">
               <Image
@@ -142,7 +140,7 @@ ${BUYER_DETAILS.name}
                 alt={listing.title}
                 fill
                 className="object-cover rounded-2xl"
-                priority={index === 0}
+                priority={listing.token_id === 1}
               />
             </div>
             <div className="flex flex-col justify-between">
@@ -191,6 +189,7 @@ ${BUYER_DETAILS.name}
         onClose={() => setIsAgreementOpen(false)}
         agreement={agreementText}
         loading={agreementLoading}
+        nft={selectedNFT}
       />
     </>
   );
