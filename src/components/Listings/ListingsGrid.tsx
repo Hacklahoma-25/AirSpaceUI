@@ -30,7 +30,7 @@ export const ListingsGrid = () => {
   useEffect(() => {
     const fetchListings = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/nfts/');
+        const response = await fetch('https://airspace-tuyr.onrender.com/api/nfts');
         if (!response.ok) {
           throw new Error('Failed to fetch listings');
         }
@@ -53,7 +53,7 @@ export const ListingsGrid = () => {
     setIsAgreementOpen(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/nft/agreement/', {
+      const response = await fetch('https://airspace-tuyr.onrender.com/api/nft/agreement', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
